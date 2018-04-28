@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html>
+<head>
+<script src="aws-cognito-sdk.min.js"></script>
+  <script src="amazon-cognito-identity.min.js"></script>
+  <script src="https://sdk.amazonaws.com/js/aws-sdk-2.229.1.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Rekognition</title>
+</head>
+
+<body>
+  <input type="file" name="fileToUpload" id="fileToUpload" accept="image/*">
+  <p id="opResult"></p>
+</body>
+<script>
+
+  document.getElementById("fileToUpload").addEventListener("change", function (event) {
+    ProcessImage();
+  }, false);
+
+
+
+
+  function ProcessImage() {
+    AnonLog();
+    var control = document.getElementById("fileToUpload");
+    var file = control.files[0];
+
+    // Load base64 encoded image 
+    var reader = new FileReader();
+    reader.onload = (function (theFile) {
+      return function (e) {
+        var img = document.createElement('img');
+        var image = null;
+        img.src = e.target.result;
+        var jpg = true;
+        try {
+          image = atob(e.target.result.split("data:image/jpeg;base64,")[1]);
+
+        } catch (e) {
+          jpg = false;
+        }
+        if (jpg == false) {
+          try {
+            image = atob(e.target.result.split("data:image/png;base64,")[1]);
+          } catch (e) {
+            alert("Not an image file Rekognition can process");
+            return;
+          }
+        }
+        //unencode image bytes for Rekognition DetectFaces API 
+        var length = image.length;
+        imageBytes = new ArrayBuffer(length);
+        var ua = new Uint8Array(imageBytes);
+        for (var i = 0; i < length; i++) {
+          ua[i] = image.charCodeAt(i);
+        }
+        //Call Rekognition  
+        searchFacesByImage(imageBytes);
+        //console.log(imageBytes); 
+      };
+    })(file);
+    reader.readAsDataURL(file);
+  }
+  //Provides anonymous log on to AWS services
+  function AnonLog() {
+    
+    // Configure the credentials provider to use your identity pool
+    AWS.config.region = 'us-east-1'; // Region
+    AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+      IdentityPoolId: 'us-east-1:5b8a5ee4-eef9-4a65-a19b-b372cfbf3523',
+    });
+    // Make the call to obtain credentials
+    AWS.config.credentials.get(function () {
+      // Credentials will be available when this function is called.
+      var accessKeyId = AWS.config.credentials.accessKeyId;
+      var secretAccessKey = AWS.config.credentials.secretAccessKey;
+      var sessionToken = AWS.config.credentials.sessionToken;
+    });
+  }
+
+   //Search Faces by Image
+function searchFacesByImage(imageData) {
+  var rekognition = new AWS.Rekognition();
+var params = {
+  CollectionId: 'STRING_VALUE', 
+  Image: { /* required */
+    Bytes: imageData || 'STRING_VALUE',
+    S3Object: {
+      Bucket: 'STRING_VALUE',
+      Name: 'STRING_VALUE',
+      Version: 'STRING_VALUE'
+    }
+  },
+  FaceMatchThreshold: 0.0,
+  MaxFaces: 1
+};
+rekognition.searchFacesByImage(params, function(err, data) {
+  if (err) console.log(err, err.stack); // an error occurred
+  else     console.log(data);           // successful response
+});
+
+}
+
+/*
+
+-------NEW-----------
+Cognito_boosala_testAuth_Role
+
+AWS.config.region = 'us-east-1'; // Region
+AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+    IdentityPoolId: 'us-east-1:5b8a5ee4-eef9-4a65-a19b-b372cfbf3523',
+});
+
+
+
+-------OLD-----------
+Cognito_testing123Auth_Role
+
+
+AWS.config.region = ''; // Region
+AWS.config.credentials = new AWS.CognitoIdentityCredentials({
+    IdentityPoolId: 'us-east-1:114be123-54bf-4dcb-8b9d-c75b51107f1c',
+});
+
+*/
+//end search faces by image
+</script>
+</html>
